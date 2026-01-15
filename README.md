@@ -5,6 +5,11 @@ Terminal CLI for querying Ollama models via the HTTP API.
 ## Install
 
 ```bash
+pip install estudely-askai
+```
+OR
+
+```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
