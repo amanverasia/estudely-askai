@@ -5,7 +5,7 @@ import json
 import sys
 
 from . import __version__
-from .config import resolve_settings
+from .config import resolve_settings, write_config
 from .errors import AppError
 from .ollama_client import OllamaClient
 
@@ -19,6 +19,9 @@ def app(argv: list[str] | None = None) -> int:
 
 
 def _run(argv: list[str] | None) -> int:
+    raw_args = argv if argv is not None else sys.argv[1:]
+    no_args = len(raw_args) == 0
+
     parser = argparse.ArgumentParser(prog="askai", description="Query Ollama models.")
     parser.add_argument("--host", help="Ollama host URL.")
     parser.add_argument("--model", help="Model name.")
@@ -34,7 +37,7 @@ def _run(argv: list[str] | None) -> int:
     parser.add_argument("--version", action="store_true", help="Print version.")
     parser.add_argument("prompt", nargs=argparse.REMAINDER, help="Prompt text.")
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args(raw_args)
 
     if args.version:
         print(__version__)
@@ -67,6 +70,9 @@ def _run(argv: list[str] | None) -> int:
 
     prompt = " ".join(args.prompt).strip()
     if not prompt:
+        if no_args:
+            parser.print_help()
+            return _init_config_interactive(args)
         print("No prompt provided.", file=sys.stderr)
         return 1
 
@@ -94,6 +100,54 @@ def _run(argv: list[str] | None) -> int:
     response = client.generate(settings.model, prompt)
     print(response)
     return 0
+
+
+def _init_config_interactive(args: argparse.Namespace) -> int:
+    settings = resolve_settings(
+        host=args.host,
+        model=args.model,
+        timeout=args.timeout,
+        cloud=args.cloud,
+        local=args.local,
+    )
+    client = OllamaClient(settings.host, settings.timeout, settings.api_key)
+    models = client.list_models()
+    if not models:
+        print("No models available to select.", file=sys.stderr)
+        return 1
+
+    print("Available models:")
+    for index, name in enumerate(models, start=1):
+        print(f"{index}. {name}")
+
+    selection = _prompt_model_choice(len(models))
+    if selection is None:
+        print("No model selected.", file=sys.stderr)
+        return 1
+
+    chosen = models[selection - 1]
+    path = write_config(settings.host, chosen, settings.timeout)
+    print(f"Saved default model '{chosen}' to {path}.")
+    return 0
+
+
+def _prompt_model_choice(count: int) -> int | None:
+    while True:
+        try:
+            raw = input(f"Choose a default model [1-{count}]: ").strip()
+        except EOFError:
+            return None
+        if not raw:
+            print("Please enter a number.", file=sys.stderr)
+            continue
+        try:
+            choice = int(raw)
+        except ValueError:
+            print("Please enter a number.", file=sys.stderr)
+            continue
+        if 1 <= choice <= count:
+            return choice
+        print(f"Choose a number between 1 and {count}.", file=sys.stderr)
 
 
 if __name__ == "__main__":

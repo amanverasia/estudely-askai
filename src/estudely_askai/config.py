@@ -25,6 +25,25 @@ def _config_path() -> str:
     )
 
 
+def config_path() -> str:
+    return _config_path()
+
+
+def _toml_quote(value: str) -> str:
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def write_config(host: str, model: str, timeout: int) -> str:
+    path = _config_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(f"host = {_toml_quote(host)}\n")
+        handle.write(f"model = {_toml_quote(model)}\n")
+        handle.write(f"timeout = {timeout}\n")
+    return path
+
+
 def _load_toml(path: str) -> dict[str, object]:
     try:
         import tomllib
