@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 
 from . import __version__
-from .config import resolve_settings, write_config
+from .config import config_path, resolve_settings, write_config
 from .errors import AppError
 from .ollama_client import OllamaClient
 
@@ -72,7 +73,9 @@ def _run(argv: list[str] | None) -> int:
     if not prompt:
         if no_args:
             parser.print_help()
-            return _init_config_interactive(args)
+            if not os.path.exists(config_path()):
+                return _init_config_interactive(args)
+            return 0
         print("No prompt provided.", file=sys.stderr)
         return 1
 

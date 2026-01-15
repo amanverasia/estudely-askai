@@ -36,11 +36,14 @@ def _toml_quote(value: str) -> str:
 
 def write_config(host: str, model: str, timeout: int) -> str:
     path = _config_path()
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as handle:
-        handle.write(f"host = {_toml_quote(host)}\n")
-        handle.write(f"model = {_toml_quote(model)}\n")
-        handle.write(f"timeout = {timeout}\n")
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(f"host = {_toml_quote(host)}\n")
+            handle.write(f"model = {_toml_quote(model)}\n")
+            handle.write(f"timeout = {timeout}\n")
+    except OSError as exc:
+        raise ConfigError(f"Unable to write config file at {path}: {exc}") from exc
     return path
 
 

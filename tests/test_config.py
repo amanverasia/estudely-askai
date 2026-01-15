@@ -1,4 +1,8 @@
-from estudely_askai.config import resolve_settings
+import pytest
+
+from estudely_askai import config
+from estudely_askai.config import resolve_settings, write_config
+from estudely_askai.errors import ConfigError
 
 
 def test_resolve_settings_uses_config_file(tmp_path, monkeypatch) -> None:
@@ -22,3 +26,15 @@ def test_resolve_settings_uses_config_file(tmp_path, monkeypatch) -> None:
     assert settings.host == "http://example.com"
     assert settings.model == "mistral"
     assert settings.timeout == 42
+
+
+def test_write_config_handles_os_error(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    def boom(*_args, **_kwargs):
+        raise OSError("nope")
+
+    monkeypatch.setattr(config.os, "makedirs", boom)
+    with pytest.raises(ConfigError) as exc:
+        write_config("http://example.com", "llama3.1", 60)
+    assert "Unable to write config file" in str(exc.value)

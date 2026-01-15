@@ -6,7 +6,7 @@ from estudely_askai.cli import app
 def test_version(capsys) -> None:
     code = app(["--version"])
     captured = capsys.readouterr()
-    assert captured.out.strip() == "0.2.0"
+    assert captured.out.strip() == "0.2.1"
     assert code == 0
 
 
@@ -39,3 +39,20 @@ def test_no_args_creates_config(capsys, monkeypatch, tmp_path) -> None:
     content = config_path.read_text(encoding="utf-8")
     assert 'model = "model-a"' in content
     assert code == 0
+
+
+def test_no_args_skips_prompt_when_config_exists(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    config_dir = tmp_path / ".config" / "estudely-askai"
+    config_dir.mkdir(parents=True)
+    config_path = config_dir / "config.toml"
+    config_path.write_text(
+        'host = "http://localhost:11434"\nmodel = "model-a"\ntimeout = 60\n',
+        encoding="utf-8",
+    )
+    with patch("builtins.input") as mock_input:
+        with patch("estudely_askai.cli.OllamaClient") as mock_client:
+            code = app([])
+    assert code == 0
+    assert mock_input.call_count == 0
+    assert mock_client.call_count == 0
