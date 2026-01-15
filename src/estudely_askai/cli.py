@@ -25,13 +25,13 @@ def _run(argv: list[str] | None) -> int:
     parser.add_argument("--timeout", type=int, help="Request timeout in seconds.")
     parser.add_argument("--json", action="store_true", help="Print models as JSON.")
     parser.add_argument("--stream", action="store_true", help="Stream response tokens.")
+    parser.add_argument("--models", action="store_true", help="List available models.")
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--cloud", action="store_true", help="Use Ollama cloud host.")
     group.add_argument("--local", action="store_true", help="Force localhost host default.")
 
     parser.add_argument("--version", action="store_true", help="Print version.")
-    parser.add_argument("command", nargs="?", help='Prompt text or "models".')
     parser.add_argument("prompt", nargs=argparse.REMAINDER, help="Prompt text.")
 
     args = parser.parse_args(argv)
@@ -40,8 +40,34 @@ def _run(argv: list[str] | None) -> int:
         print(__version__)
         return 0
 
-    if not args.command:
-        parser.print_help()
+    if args.models:
+        if args.prompt:
+            print("--models does not accept a prompt.", file=sys.stderr)
+            return 1
+        if args.stream:
+            print("--stream cannot be used with --models.", file=sys.stderr)
+            return 1
+
+        settings = resolve_settings(
+            host=args.host,
+            model=args.model,
+            timeout=args.timeout,
+            cloud=args.cloud,
+            local=args.local,
+        )
+
+        client = OllamaClient(settings.host, settings.timeout, settings.api_key)
+        models = client.list_models()
+        if args.json:
+            print(json.dumps(models))
+        else:
+            for name in models:
+                print(name)
+        return 0
+
+    prompt = " ".join(args.prompt).strip()
+    if not prompt:
+        print("No prompt provided.", file=sys.stderr)
         return 1
 
     settings = resolve_settings(
@@ -53,20 +79,6 @@ def _run(argv: list[str] | None) -> int:
     )
 
     client = OllamaClient(settings.host, settings.timeout, settings.api_key)
-
-    if args.command == "models" and not args.prompt:
-        models = client.list_models()
-        if args.json:
-            print(json.dumps(models))
-        else:
-            for name in models:
-                print(name)
-        return 0
-
-    prompt = " ".join([args.command, *args.prompt]).strip()
-    if not prompt:
-        print("No prompt provided.", file=sys.stderr)
-        return 1
 
     if args.stream:
         last_chunk = ""

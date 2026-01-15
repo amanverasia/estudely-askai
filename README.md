@@ -15,7 +15,7 @@ pip install -e .
 ```bash
 askai --version
 askai "what is the capital of france"
-askai models
+askai --models
 askai --host http://localhost:11434 --model llama3.1 "hello"
 askai --stream "stream me"
 ```
@@ -26,8 +26,9 @@ askai --stream "stream me"
 --host      Ollama host (default: env OLLAMA_HOST or http://localhost:11434)
 --model     Model name (default: env ASKAI_MODEL or llama3.1)
 --timeout   Request timeout in seconds (default: 60)
---json      Print models as JSON (models command only)
+--json      Print models as JSON (use with --models)
 --stream    Stream response tokens
+--models    List available models
 --cloud     Use Ollama cloud host (requires OLLAMA_API_KEY)
 --local     Force localhost host default
 ```
